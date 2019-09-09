@@ -61,7 +61,7 @@ static long double int128_to_double(__u8 *data)
     int i;
     long double result = 0;
 
-    for (i = 0; i < 16; i++) 
+    for (i = 0; i < 16; i++)
     {
         result *= 256;
         result += data[15 - i];
@@ -94,7 +94,7 @@ static void vt_convert_data_buffer_to_hex_string(const unsigned char *bufPtr, co
         {
             pos = size - 1 - i;
         }
-        else 
+        else
         {
             pos = i;
         }
@@ -143,6 +143,8 @@ static void vt_convert_smart_data_to_human_readable_format(struct vtview_smart_l
     snprintf(tempbuff, sizeof(tempbuff), "Available_Spare_Threshold;%u;", smart->raw_smart.spare_thresh);
     strcat(text, tempbuff);
     snprintf(tempbuff, sizeof(tempbuff), "Percentage_Used;%u;", smart->raw_smart.percent_used);
+    strcat(text, tempbuff);
+    snprintf(tempbuff, sizeof(tempbuff), "Endurance_Grp_Critical_Warn_Summary;%u;", smart->raw_smart.endu_grp_crit_warn_sumry);
     strcat(text, tempbuff);
     snprintf(tempbuff, sizeof(tempbuff), "Data_Units_Read;%0.Lf;", int128_to_double(smart->raw_smart.data_units_read));
     strcat(text, tempbuff);
@@ -286,32 +288,32 @@ static int vt_add_entry_to_log(const int fd, const char *path, const struct vtvi
     {
         strcpy(filename, cfg->output_file);
     }
-	
+
     smart.time_stamp = time(NULL);
     nsid = nvme_get_nsid(fd);
-	
-    if(nsid <= 0) 
+
+    if(nsid <= 0)
     {
         printf("Cannot read namespace-id\n");
         return -1;
     }
-	
+
     ret = nvme_identify_ns(fd, nsid, 0, &smart.raw_ns);
-    if(ret) 
+    if(ret)
     {
         printf("Cannot read namespace identify\n");
         return -1;
     }
-	
+
     ret = nvme_identify_ctrl(fd, &smart.raw_ctrl);
-    if(ret) 
+    if(ret)
     {
         printf("Cannot read device identify controller\n");
         return -1;
     }
-	
+
     ret = nvme_smart_log(fd, NVME_NSID_ALL, &smart.raw_smart);
-    if(ret) 
+    if(ret)
     {
         printf("Cannot read device SMART log\n");
         return -1;
@@ -321,7 +323,7 @@ static int vt_add_entry_to_log(const int fd, const char *path, const struct vtvi
     vt_process_string(smart.raw_ctrl.mn, sizeof(smart.raw_ctrl.mn));
 
     ret = vt_append_log(&smart, filename);
-	
+
     return (ret);
 }
 
@@ -333,7 +335,7 @@ static int vt_update_vtview_log_header(const int fd, const char *path, const str
 
     vt_initialize_header_buffer(&header);
     strcpy(header.path, path);
-	
+
     if(NULL == cfg->test_name)
     {
         strcpy(header.test_name, DEFAULT_TEST_NAME);
@@ -342,7 +344,7 @@ static int vt_update_vtview_log_header(const int fd, const char *path, const str
     {
         strcpy(header.test_name, cfg->test_name);
     }
-	
+
     if(NULL == cfg->output_file)
     {
         strcpy(filename, vt_default_log_file_name);
@@ -356,14 +358,14 @@ static int vt_update_vtview_log_header(const int fd, const char *path, const str
     header.time_stamp = time(NULL);
 
     ret = nvme_identify_ctrl(fd, &header.raw_ctrl);
-    if(ret) 
+    if(ret)
     {
         printf("Cannot read identify device\n");
         return -1;
     }
-	
+
     ret = nvme_fw_log(fd, &header.raw_fw);
-    if(ret) 
+    if(ret)
     {
         printf("Cannot read device firmware log\n");
         return -1;
@@ -373,7 +375,7 @@ static int vt_update_vtview_log_header(const int fd, const char *path, const str
     vt_process_string(header.raw_ctrl.mn, sizeof(header.raw_ctrl.mn));
 
     ret = vt_append_header(&header, filename);
-	
+
     return (ret);
 }
 
@@ -385,14 +387,14 @@ static void vt_build_identify_lv2(unsigned int data, unsigned int start,
     unsigned int temp;
 
     end = start + count;
-	
+
     for(i = start; i < end; i++)
     {
         temp = ((data & (sh << i)) >> i);
         pos = i * 2;
         printf("        \"bit %u\":\"%ub  %s\"\n", i, temp, table[pos]);
         printf("                     %s", table[pos + 1]);
-        
+
         if((end - 1) != i || !isEnd)
         {
             printf(",\n");
@@ -402,7 +404,7 @@ static void vt_build_identify_lv2(unsigned int data, unsigned int start,
             printf("\n");
         }
     }
-	
+
     if(isEnd)
     {
         printf("    },\n");
@@ -691,7 +693,7 @@ static void vt_parse_detail_identify(const struct nvme_id_ctrl *ctrl)
     vt_convert_data_buffer_to_hex_string(&buf[296], 16, true, s);
     printf("    \"Unallocated NVM Capacity\":\"%sh\",\n", s);
 
-    temp = le32_to_cpu(ctrl->rpmbs); 
+    temp = le32_to_cpu(ctrl->rpmbs);
     printf("    \"Replay Protected Memory Block Support\":{\n");
     vt_convert_data_buffer_to_hex_string(&buf[312], 4, true, s);
     printf("        \"Value\":\"%sh\",\n", s);
@@ -765,7 +767,7 @@ static void vt_parse_detail_identify(const struct nvme_id_ctrl *ctrl)
     vt_convert_data_buffer_to_hex_string(&buf[522], 2, true, s);
     printf("        \"Value\":\"%sh\",\n", s);
     vt_build_identify_lv2(temp, 0, 1, FUSEStable, true);
-    
+
     temp = ctrl->fna;
     printf("    \"Format NVM Attributes\":{\n");
     vt_convert_data_buffer_to_hex_string(&buf[524], 1, true, s);
@@ -777,7 +779,7 @@ static void vt_parse_detail_identify(const struct nvme_id_ctrl *ctrl)
     vt_convert_data_buffer_to_hex_string(&buf[525], 1, true, s);
     printf("        \"Value\":\"%sh\",\n", s);
     vt_build_identify_lv2(temp, 0, 1, VWCtable, true);
-    
+
     vt_convert_data_buffer_to_hex_string(&buf[526], 2, true, s);
     printf("    \"Atomic Write Unit Normal\":\"%sh\",\n", s);
     vt_convert_data_buffer_to_hex_string(&buf[528], 2, true, s);
@@ -796,7 +798,7 @@ static void vt_parse_detail_identify(const struct nvme_id_ctrl *ctrl)
     printf("    \"SGL Support\":{\n");
     vt_convert_data_buffer_to_hex_string(&buf[536], 4, true, s);
     printf("        \"Value\":\"%sh\",\n", s);
-    pos = (temp & 0x00000003); 
+    pos = (temp & 0x00000003);
     printf("        \"bit 1:0\":\"%s\",\n", SGLSSubtable[pos]);
     vt_build_identify_lv2(temp, 2, 1, SGLStable, false);
     vt_build_identify_lv2(temp, 16, 5, SGLStable, true);
@@ -838,7 +840,7 @@ Just logging :\n\
         .output_file = NULL,
         .test_name = NULL,
     };
-	
+
     const struct argconfig_commandline_options command_line_options[] = \
     {
         {"run-time",    'r', "NUM", CFG_DOUBLE, &cfg.run_time_hrs, required_argument, run_time},
@@ -851,10 +853,10 @@ Just logging :\n\
     vt_generate_vtview_log_file_name(vt_default_log_file_name);
 
     fd = parse_and_open(argc, argv, desc, command_line_options, &cfg, sizeof(cfg));
-    if (fd < 0) 
+    if (fd < 0)
     {
         printf("Error parse and open (fd = %d)\n", fd);
-		
+
         return (fd);
     }
 
@@ -865,11 +867,11 @@ Just logging :\n\
     printf("Collecting data for device %s\n", path);
     printf("Running for %lf hour(s)\n", cfg.run_time_hrs);
     printf("Logging SMART data for every %lf hour(s)\n", cfg.log_record_frequency_hrs);
-	
+
     ret = vt_update_vtview_log_header(fd, path, &cfg);
-    if(ret) 
+    if(ret)
     {
-        err = EINVAL;	
+        err = EINVAL;
         close(fd);
         return (err);
     }
@@ -877,17 +879,17 @@ Just logging :\n\
     // start get log
     total_time = cfg.run_time_hrs * (float)HOUR_IN_SECONDS;
     freq_time = cfg.log_record_frequency_hrs * (float)HOUR_IN_SECONDS;
-    
+
     if(freq_time == 0)
     {
         freq_time = 1;
     }
-	
+
     start_time = time(NULL);
     end_time = start_time + total_time;
 
     fflush(stdout);
-	
+
     while(1)
     {
         cur_time = time(NULL);
@@ -898,7 +900,7 @@ Just logging :\n\
 
         // update log
         ret = vt_add_entry_to_log(fd, path, &cfg);
-        if(ret) 
+        if(ret)
         {
             printf("Cannot update driver log\n");
             break;
@@ -929,18 +931,18 @@ virtium show-identify /dev/yourDevice\n";
     };
 
     fd = parse_and_open(argc, argv, desc, command_line_options, NULL, 0);
-    if (fd < 0) 
+    if (fd < 0)
     {
         printf("Error parse and open (fd = %d)\n", fd);
-		
+
         return (fd);
     }
 
     ret = nvme_identify_ctrl(fd, &ctrl);
-    if(ret) 
+    if(ret)
     {
         printf("Cannot read identify device\n");
-		
+
 		close (fd);
         return (-1);
     }
